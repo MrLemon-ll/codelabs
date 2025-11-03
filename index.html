@@ -4,48 +4,72 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bienestar • Obesidad</title>
+  <meta name="color-scheme" content="light dark">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="data:,"/>
+  <style>
+    html,body,#root{height:100%}
+    ::selection{background:#fb7185;color:#fff}
+  </style>
 </head>
 <body class="antialiased">
   <div id="root"></div>
 
-  <!-- React + Babel (CDN) -->
+  <!-- React + ReactDOM + Babel (CDN) -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Recharts UMD -->
+  <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
 
   <script type="text/babel">
-    const { useMemo, useRef, useState } = React;
+    const { useEffect, useMemo, useRef, useState } = React;
+    const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
 
     const Card = ({ className = "", children }) => (
-      <div className={`rounded-3xl bg-white/70 backdrop-blur border border-neutral-200 shadow-sm ${className}`}>{children}</div>
+      <div className={`rounded-3xl bg-white/70 dark:bg-neutral-900/60 backdrop-blur border border-neutral-200 dark:border-neutral-800 shadow-sm ${className}`}>{children}</div>
     );
     const Pill = ({ children }) => (
-      <span className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-1 text-sm bg-white/70">{children}</span>
+      <span className="inline-flex items-center gap-2 rounded-full border border-neutral-200 dark:border-neutral-700 px-3 py-1 text-sm bg-white/70 dark:bg-neutral-900/60">{children}</span>
     );
     const AnimatedBlob = ({ className = "" }) => (
       <div className={`relative h-24 w-full overflow-hidden rounded-2xl ${className}`} aria-hidden>
-        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-pink-200 via-rose-100 to-amber-100"></div>
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-pink-200 via-rose-100 to-amber-100 dark:from-rose-900/60 dark:via-rose-800/40 dark:to-amber-800/40"></div>
         <div className="absolute right-4 top-4 h-3 w-3 animate-bounce rounded-full bg-rose-400/70"></div>
-        <div className="absolute bottom-3 left-6 h-2 w-2 animate-bounce rounded-full bg-amber-500/70 [animation-delay:200ms]"></div>
+        <div className="absolute bottom-3 left-6 h-2 w-2 animate-bounce rounded-full bg-amber-500/70" style={{animationDelay:"200ms"}}></div>
       </div>
     );
 
-    function App() {
+    // localStorage helper
+    const useLocal = (key, initial) => {
+      const [state, setState] = useState(() => {
+        try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : initial; } catch { return initial; }
+      });
+      useEffect(() => { try { localStorage.setItem(key, JSON.stringify(state)); } catch {} }, [key, state]);
+      return [state, setState];
+    };
+
+    function App(){
+      // Theme
+      const [dark, setDark] = useLocal("obesidad-theme-dark", false);
+      useEffect(() => {
+        const root = document.documentElement;
+        dark ? root.classList.add("dark") : root.classList.remove("dark");
+      }, [dark]);
+
       const pasosRef = useRef(null);
       const [slide, setSlide] = useState(0);
       const pasos = [
         { titulo: "1) Conócete y define metas",
           items: ["Calcula tu IMC y perímetro de cintura.","Elige 1 meta concreta para 4–6 semanas.","Registra alimentación, sueño y actividad 3 días."]},
         { titulo: "2) Plan 80/20 + movimiento",
-          items: ["3 comidas + 1 colación con proteína y fibra.","Plato saludable: 1/2 verduras, 1/4 proteína, 1/4 carbo integral.","150–300 min/sem + 2 sesiones de fuerza."]},
+          items: ["3 comidas + 1 colación con proteína y fibra.","Plato: 1/2 verduras, 1/4 proteína, 1/4 carbo integral.","150–300 min/sem + 2 sesiones de fuerza."]},
         { titulo: "3) Acompañamiento y seguimiento",
-          items: ["Apoyo psicológico para imagen corporal y hambre emocional.","Consulta médica si hay comorbilidades.","Revisa progreso semanal y ajusta con compasión."]},
+          items: ["Apoyo psicológico (hambre emocional, imagen corporal).","Consulta médica si hay comorbilidades.","Revisión semanal y ajustes amables."]},
       ];
 
-      const [kg, setKg] = useState(70);
-      const [cm, setCm] = useState(170);
+      // IMC
+      const [kg, setKg]   = useLocal("kg", 70);
+      const [cm, setCm]   = useLocal("cm", 170);
       const bmi = useMemo(() => {
         const m = Number(cm)/100;
         const v = Number(kg)/(m*m || 1);
@@ -54,35 +78,100 @@
       const clasif = useMemo(() => {
         if (!bmi) return "—";
         if (bmi < 18.5) return "Bajo peso";
-        if (bmi < 25) return "Normopeso";
-        if (bmi < 30) return "Sobrepeso";
-        if (bmi < 35) return "Obesidad I";
-        if (bmi < 40) return "Obesidad II";
+        if (bmi < 25)   return "Normopeso";
+        if (bmi < 30)   return "Sobrepeso";
+        if (bmi < 35)   return "Obesidad I";
+        if (bmi < 40)   return "Obesidad II";
         return "Obesidad III";
       }, [bmi]);
+
+      // TDEE (Mifflin–St Jeor)
+      const [sexo, setSexo] = useLocal("sexo", "F");
+      const [edad, setEdad] = useLocal("edad", 30);
+      const [actividad, setAct] = useLocal("actividad", 1.375);
+      const bmr = useMemo(() => {
+        const w = Number(kg), h = Number(cm), a = Number(edad);
+        const base = sexo === "M" ? 10*w + 6.25*h - 5*a + 5 : 10*w + 6.25*h - 5*a - 161;
+        return Math.round(base);
+      }, [sexo, kg, cm, edad]);
+      const tdee = useMemo(() => Math.round(bmr * Number(actividad)), [bmr, actividad]);
+
+      // Hábitos
+      const defaultHabits = [
+        { id: "agua",   nombre: "Agua (8 vasos)", semana: Array(7).fill(false) },
+        { id: "pasos",  nombre: "10k pasos",      semana: Array(7).fill(false) },
+        { id: "fuerza", nombre: "Fuerza (2x)",    semana: Array(7).fill(false) },
+      ];
+      const [habitos, setHabitos] = useLocal("habitos", defaultHabits);
+      const toggleDia = (hid, idx) => {
+        setHabitos(H => H.map(h => h.id === hid ? { ...h, semana: h.semana.map((v,i)=> i===idx ? !v : v) } : h));
+      };
+
+      // Registro de peso
+      const [pesoRegistro, setPesoRegistro] = useLocal("pesoRegistro", [
+        { fecha: new Date().toISOString().slice(0,10), peso: kg }
+      ]);
+      const [newWeight, setNewWeight] = useState(kg);
+      const [newDate,   setNewDate]   = useState(new Date().toISOString().slice(0,10));
+      const addWeight = () => {
+        if (!newDate || !newWeight) return;
+        setPesoRegistro(arr => {
+          const next = [...arr.filter(p => p.fecha !== newDate), { fecha: newDate, peso: Number(newWeight) }]
+            .sort((a,b)=> a.fecha.localeCompare(b.fecha));
+          return next;
+        });
+      };
+
+      // Quiz
+      const preguntas = [
+        { q: "¿La obesidad solo se trata de fuerza de voluntad?", a: false, exp: "Influyen biología, entorno, sueño, estrés y acceso a alimentos." },
+        { q: "¿Dormir poco aumenta el apetito y el peso?", a: true,  exp: "Sí: altera grelina/leptina y favorece antojos energéticos." },
+        { q: "¿Las dietas extremas son la mejor estrategia a largo plazo?", a: false, exp: "Suelen ser insostenibles; mejor cambios graduales." },
+      ];
+      const [qIdx, setQIdx] = useLocal("quizIdx", 0);
+      const [score, setScore] = useLocal("quizScore", 0);
+      const [feedback, setFeedback] = useState("");
+      const answer = (val) => {
+        const ok = preguntas[qIdx].a === val;
+        setFeedback(ok ? "✅ ¡Correcto!" : "❌ No exactamente.");
+        if (ok) setScore(s=>s+1);
+        setTimeout(()=>{ setFeedback(""); setQIdx((i)=> (i+1)%preguntas.length); }, 900);
+      };
 
       const [sentir, setSentir] = useState("");
 
       return (
-        <div className="min-h-screen w-full bg-rose-50/70 p-5 md:p-10">
+        <div className="min-h-screen w-full bg-rose-50/70 dark:bg-neutral-950 p-5 md:p-10 text-neutral-900 dark:text-neutral-100">
           <div className="mx-auto max-w-6xl space-y-6">
+            {/* Top bar */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Pill>🌿 Bienestar</Pill>
+                <Pill>Obesidad</Pill>
+              </div>
+              <button onClick={()=>setDark(d=>!d)} className="rounded-full border px-4 py-2 text-sm hover:bg-rose-50 dark:hover:bg-neutral-900">
+                {dark ? "☾ Oscuro" : "☀️ Claro"}
+              </button>
+            </div>
+
             {/* HERO */}
             <Card className="p-6 md:p-10">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
                 <div className="md:col-span-3">
-                  <h1 className="text-4xl md:text-5xl font-serif text-neutral-800 leading-tight">
+                  <h1 className="text-4xl md:text-5xl font-serif text-neutral-800 dark:text-neutral-100 leading-tight">
                     El primer paso<br/> hacia tu bienestar
                   </h1>
-                  <p className="mt-4 max-w-prose text-neutral-600">
+                  <p className="mt-4 max-w-prose text-neutral-700 dark:text-neutral-300">
                     La prevención y el tratamiento de la obesidad inician con acompañamiento emocional,
                     hábitos sostenibles y pequeños pasos diarios.
                   </p>
                   <div className="mt-5 flex flex-wrap gap-3">
-                    <Pill><span className="text-xl">☀️</span><span>Prevención con apoyo emocional</span></Pill>
-                    <Pill><span className="text-xl">🌿</span><span>Hábitos amables y sostenibles</span></Pill>
+                    <Pill>☀️ Prevención con apoyo emocional</Pill>
+                    <Pill>🧠 Salud mental compasiva</Pill>
+                    <Pill>🥗 Hábitos sostenibles</Pill>
                   </div>
                   <button
-                    onClick={() => pasosRef.current?.scrollIntoView({behavior:"smooth"})}
+                    onClick={() => document.getElementById("pasos").scrollIntoView({behavior:"smooth"})}
                     className="mt-6 inline-flex items-center gap-2 rounded-full bg-rose-500 px-5 py-2 text-white shadow hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-300">
                     Empieza con los pasos →
                   </button>
@@ -90,8 +179,8 @@
                 <div className="md:col-span-2 flex items-center justify-center">
                   <div className="relative w-full max-w-xs">
                     <AnimatedBlob />
-                    <div className="pointer-events-none absolute -bottom-6 right-4 rotate-6 rounded-2xl border bg-white/80 px-3 py-2 text-sm shadow">
-                      <span className="mr-1">💗</span> ¡Acompañamiento cercano!
+                    <div className="pointer-events-none absolute -bottom-6 right-4 rotate-6 rounded-2xl border bg-white/80 dark:bg-neutral-900/70 px-3 py-2 text-sm shadow">
+                      💗 ¡Acompañamiento cercano!
                     </div>
                   </div>
                 </div>
@@ -101,114 +190,178 @@
             {/* Objetivo + Datos + Apoyo */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <Card className="p-6">
-                <h2 className="text-2xl font-semibold text-neutral-800">Objetivo del proyecto</h2>
-                <p className="mt-3 text-neutral-700">
-                  Promover el bienestar integral y prevenir complicaciones de la obesidad con
-                  educación clara, herramientas prácticas y enfoque de salud mental compasivo.
+                <h2 className="text-2xl font-semibold">Objetivo del proyecto</h2>
+                <p className="mt-3 text-neutral-700 dark:text-neutral-300">
+                  Promover bienestar integral y prevenir complicaciones mediante educación clara,
+                  herramientas prácticas y enfoque psicológico compasivo.
                 </p>
-                <ul className="mt-3 list-disc pl-5 text-neutral-700 space-y-1">
-                  <li>Educar con datos epidemiológicos actuales.</li>
+                <ul className="mt-3 list-disc pl-5 space-y-1 text-neutral-700 dark:text-neutral-300">
+                  <li>Educar con datos.</li>
                   <li>Fortalecer autoestima e imagen corporal.</li>
-                  <li>Guiar un tratamiento paso a paso, realista y seguro.</li>
+                  <li>Guiar un tratamiento paso a paso y seguro.</li>
                 </ul>
               </Card>
-
               <Card className="p-6">
-                <h2 className="text-2xl font-semibold text-neutral-800">Datos epidemiológicos</h2>
-                <p className="mt-3 text-neutral-700">
-                  La obesidad es una condición crónica prevalente; aumenta riesgo de DM2, HTA y apnea del sueño.
+                <h2 className="text-2xl font-semibold">Datos epidemiológicos</h2>
+                <p className="mt-3 text-neutral-700 dark:text-neutral-300">
+                  Condición crónica prevalente con riesgo de DM2, HTA y apnea del sueño.
+                  Importan también los determinantes sociales del entorno.
                 </p>
-                <div className="mt-4"><AnimatedBlob /></div>
+                <AnimatedBlob className="mt-4" />
               </Card>
-
               <Card className="p-6">
-                <h2 className="text-2xl font-semibold text-neutral-800">Apoyo psicológico</h2>
-                <p className="mt-3 text-neutral-700">
-                  Habilidades para manejar hambre emocional, crítica corporal y perfeccionismo con enfoque compasivo.
+                <h2 className="text-2xl font-semibold">Apoyo psicológico</h2>
+                <p className="mt-3 text-neutral-700 dark:text-neutral-300">
+                  Abordamos hambre emocional, auto-crítica y prevención de recaídas con metas pequeñas
+                  y refuerzo positivo.
                 </p>
-                <div className="mt-4"><AnimatedBlob /></div>
+                <AnimatedBlob className="mt-4" />
               </Card>
             </div>
 
-            {/* IMC */}
+            {/* Calculadoras */}
             <Card className="p-6">
-              <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
+              <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-3">
                 <div className="md:col-span-2">
-                  <h3 className="text-2xl font-semibold text-neutral-800">Calculadora de IMC</h3>
-                  <p className="mt-2 text-neutral-700">Orientativa (no reemplaza consulta clínica).</p>
+                  <h3 className="text-2xl font-semibold">Calculadora de IMC</h3>
+                  <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">Orientativa; no sustituye valoración clínica.</p>
                   <div className="mt-4 grid grid-cols-2 gap-4 max-w-md">
-                    <label className="text-sm text-neutral-600">Peso (kg)
+                    <label className="text-sm">Peso (kg)
                       <input type="number" value={kg} onChange={(e)=>setKg(Number(e.target.value))}
-                        className="mt-1 w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-300"/>
+                        className="mt-1 w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-300 dark:bg-neutral-900 dark:border-neutral-700"/>
                     </label>
-                    <label className="text-sm text-neutral-600">Estatura (cm)
+                    <label className="text-sm">Estatura (cm)
                       <input type="number" value={cm} onChange={(e)=>setCm(Number(e.target.value))}
-                        className="mt-1 w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-300"/>
+                        className="mt-1 w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-300 dark:bg-neutral-900 dark:border-neutral-700"/>
                     </label>
                   </div>
-                  <p className="mt-3 text-neutral-700"><strong>IMC:</strong> <span className="font-semibold">{bmi}</span> — {clasif}</p>
-                  <p className="mt-1 text-xs text-neutral-500">* Considera también perímetro de cintura.</p>
+                  <p className="mt-3"><strong>IMC:</strong> <span className="font-semibold">{bmi}</span> — {clasif}</p>
                 </div>
+
                 <div className="md:col-span-1">
-                  <div className="rounded-2xl border bg-white p-4 text-sm leading-relaxed text-neutral-700">
-                    <p className="font-semibold">Tips rápidos</p>
-                    <ul className="mt-2 list-disc pl-4 space-y-1">
-                      <li>Proteína en cada comida.</li>
-                      <li>La mitad del plato: verduras/frutas.</li>
-                      <li>7–10k pasos/día.</li>
-                      <li>Duerme 7–9 h.</li>
-                    </ul>
+                  <h3 className="text-2xl font-semibold">TDEE (Gasto diario)</h3>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <label className="text-sm">Sexo
+                      <select value={sexo} onChange={(e)=>setSexo(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700">
+                        <option value="F">Femenino</option>
+                        <option value="M">Masculino</option>
+                      </select>
+                    </label>
+                    <label className="text-sm">Edad
+                      <input type="number" value={edad} onChange={(e)=>setEdad(Number(e.target.value))}
+                        className="mt-1 w-full rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"/>
+                    </label>
+                    <label className="col-span-2 text-sm">Actividad
+                      <select value={actividad} onChange={(e)=>setAct(Number(e.target.value))} className="mt-1 w-full rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700">
+                        <option value={1.2}>Sedentario (×1.2)</option>
+                        <option value={1.375}>Ligero (×1.375)</option>
+                        <option value={1.55}>Moderado (×1.55)</option>
+                        <option value={1.725}>Alto (×1.725)</option>
+                        <option value={1.9}>Muy alto (×1.9)</option>
+                      </select>
+                    </label>
                   </div>
+                  <p className="mt-3 text-sm">BMR ≈ <b>{bmr}</b> kcal · TDEE ≈ <b>{tdee}</b> kcal/día</p>
+                  <ul className="mt-2 text-xs text-neutral-600 dark:text-neutral-400 list-disc pl-5">
+                    <li>Déficit suave: TDEE − 300–500 kcal.</li>
+                    <li>Superávit para ganancia muscular: TDEE + 150–300 kcal.</li>
+                  </ul>
                 </div>
               </div>
             </Card>
 
             {/* Paso a paso */}
-            <Card ref={pasosRef} className="p-6">
+            <Card id="pasos" className="p-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-semibold text-neutral-800">Cómo empezar tu tratamiento paso a paso</h3>
+                <h3 className="text-2xl font-semibold">Cómo empezar tu tratamiento paso a paso</h3>
                 <div className="flex items-center gap-2">
-                  <button onClick={()=>setSlide((s)=>(s-1+pasos.length)%pasos.length)} className="rounded-full border px-3 py-1 hover:bg-rose-50">←</button>
-                  <button onClick={()=>setSlide((s)=>(s+1)%pasos.length)} className="rounded-full border px-3 py-1 hover:bg-rose-50">→</button>
+                  <button onClick={()=>setSlide((s)=>(s-1+pasos.length)%pasos.length)} className="rounded-full border px-3 py-1 hover:bg-rose-50 dark:hover:bg-neutral-900">←</button>
+                  <button onClick={()=>setSlide((s)=>(s+1)%pasos.length)} className="rounded-full border px-3 py-1 hover:bg-rose-50 dark:hover:bg-neutral-900">→</button>
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div className="md:col-span-2">
-                  <div className="rounded-2xl border bg-white p-5">
-                    <h4 className="text-xl font-semibold text-neutral-800">{pasos[slide].titulo}</h4>
-                    <ul className="mt-3 list-disc pl-5 text-neutral-700 space-y-2">
-                      {pasos[slide].items.map((it,i)=><li key={i}>{it}</li>)}
-                    </ul>
-                  </div>
+                <div className="md:col-span-2 rounded-2xl border bg-white dark:bg-neutral-900 p-5">
+                  <h4 className="text-xl font-semibold">{pasos[slide].titulo}</h4>
+                  <ul className="mt-3 list-disc pl-5 space-y-2 text-neutral-700 dark:text-neutral-300">
+                    {pasos[slide].items.map((it,i)=><li key={i}>{it}</li>)}
+                  </ul>
                 </div>
                 <div className="md:col-span-1">
                   <AnimatedBlob className="h-40" />
                   <div className="mt-3 flex items-center justify-center gap-2">
                     {pasos.map((_,i)=>(
                       <button key={i} onClick={()=>setSlide(i)}
-                        className={`h-3 w-3 rounded-full border ${i===slide? "bg-rose-500 border-rose-500":"bg-white"}`}/>
+                        className={`h-3 w-3 rounded-full border ${i===slide? "bg-rose-500 border-rose-500":"bg-white dark:bg-neutral-900"}`}/>
                     ))}
                   </div>
                 </div>
               </div>
             </Card>
 
-            {/* Video + Emoción */}
+            {/* Habitos + Peso (gráfico) */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <Card className="p-6 md:col-span-2">
-                <h3 className="text-2xl font-semibold text-neutral-800">Videíto animado</h3>
-                <p className="mt-1 text-neutral-700">Reemplaza el embed por tu animación.</p>
-                <div className="mt-4 aspect-video w-full overflow-hidden rounded-2xl border">
-                  <iframe className="h-full w-full"
-                          src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                          title="Video educativo obesidad"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          allowfullscreen></iframe>
+                <h3 className="text-2xl font-semibold">Registro de peso</h3>
+                <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <label className="text-sm">Fecha
+                    <input type="date" value={newDate} onChange={(e)=>setNewDate(e.target.value)}
+                      className="mt-1 rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"/>
+                  </label>
+                  <label className="text-sm">Peso (kg)
+                    <input type="number" value={newWeight} onChange={(e)=>setNewWeight(e.target.value)}
+                      className="mt-1 rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"/>
+                  </label>
+                  <button onClick={addWeight} className="rounded-xl border px-4 py-2 hover:bg-rose-50 dark:hover:bg-neutral-900">Agregar</button>
+                </div>
+                <div className="mt-4 h-64 w-full">
+                  <div style="width:100%;height:100%;">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={pesoRegistro} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="fecha" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} domain={['dataMin-2','dataMax+2']} />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="peso" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </Card>
 
               <Card className="p-6 md:col-span-1">
-                <h3 className="text-2xl font-semibold text-neutral-800">¿Cómo te sentiste al ver el video?</h3>
+                <h3 className="text-2xl font-semibold">Plan de hábitos (semana)</h3>
+                <div className="mt-3 grid grid-cols-8 gap-2 text-xs">
+                  <div></div>
+                  {["L","M","X","J","V","S","D"].map((d,i)=>(<div key={i} className="text-center font-medium">{d}</div>))}
+                  {habitos.map(h=>(
+                    <React.Fragment key={h.id}>
+                      <div className="truncate pr-2 text-sm">{h.nombre}</div>
+                      {h.semana.map((v,i)=>(
+                        <button key={i} onClick={()=>toggleDia(h.id,i)}
+                          className={`aspect-square rounded-md border ${v? "bg-rose-500 text-white border-rose-500":"bg-white dark:bg-neutral-900"}`}>{v? "✓":""}</button>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </Card>
+            </div>
+
+            {/* Video + Emoción */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              <Card className="p-6 md:col-span-2">
+                <h3 className="text-2xl font-semibold">Videíto animado</h3>
+                <p className="mt-1 text-neutral-600 dark:text-neutral-400">Reemplaza el embed por tu animación.</p>
+                <div className="mt-4 aspect-video w-full overflow-hidden rounded-2xl border">
+                  <iframe className="h-full w-full"
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                    title="Video educativo obesidad"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen></iframe>
+                </div>
+              </Card>
+
+              <Card className="p-6 md:col-span-1">
+                <h3 className="text-2xl font-semibold">¿Cómo te sentiste al ver el video?</h3>
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   {[
                     {k:"motivado",label:"Motivado/a"},
@@ -217,31 +370,64 @@
                     {k:"triste",label:"Triste"},
                   ].map(op=>(
                     <button key={op.k} onClick={()=>setSentir(op.k)}
-                      className="rounded-2xl border px-3 py-3 text-sm shadow-sm hover:bg-rose-50 data-[active=true]:border-rose-500"
-                      data-active={sentir===op.k}>{op.label}</button>
+                      className={`rounded-2xl border px-3 py-3 text-sm shadow-sm hover:bg-rose-50 dark:hover:bg-neutral-900 ${sentir===op.k? "border-rose-500":"border-neutral-200 dark:border-neutral-700"}`}>{op.label}</button>
                   ))}
                 </div>
-                {sentir && <p className="mt-3 text-sm text-neutral-700">Gracias por compartir: <b>{sentir}</b>. Si necesitas apoyo, revisa nuestras redes.</p>}
+                {sentir && <p className="mt-3 text-sm text-neutral-700 dark:text-neutral-300">Gracias por compartir: <b>{sentir}</b>. Si necesitas apoyo, revisa nuestras redes.</p>}
               </Card>
             </div>
 
-            {/* Redes */}
+            {/* Quiz */}
             <Card className="p-6">
-              <h3 className="text-2xl font-semibold text-neutral-800">Redes de comunicación</h3>
-              <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-                <a href="mailto:contacto@bienestar.org" className="rounded-full border px-4 py-2 hover:bg-rose-50">📧 contacto@bienestar.org</a>
-                <a href="#" className="rounded-full border px-4 py-2 hover:bg-rose-50">📱 WhatsApp</a>
-                <a href="#" className="rounded-full border px-4 py-2 hover:bg-rose-50">📸 Instagram</a>
-                <a href="#" className="rounded-full border px-4 py-2 hover:bg-rose-50">🎥 TikTok</a>
+              <h3 className="text-2xl font-semibold">Quiz de mitos rápidos</h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">Puntaje: {score}</p>
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="md:col-span-2 rounded-2xl border bg-white dark:bg-neutral-900 p-5">
+                  <p className="text-lg">{preguntas[qIdx].q}</p>
+                  <div className="mt-4 flex gap-3">
+                    <button onClick={()=>answer(true)} className="rounded-xl border px-4 py-2 hover:bg-rose-50 dark:hover:bg-neutral-900">Verdadero</button>
+                    <button onClick={()=>answer(false)} className="rounded-xl border px-4 py-2 hover:bg-rose-50 dark:hover:bg-neutral-900">Falso</button>
+                  </div>
+                  {feedback && <p className="mt-3 text-sm">{feedback} — {preguntas[qIdx].exp}</p>}
+                </div>
+                <div className="md:col-span-1"><AnimatedBlob className="h-40" /></div>
               </div>
-              <p className="mt-4 text-xs text-neutral-500">Aviso: Contenido informativo; no sustituye valoración profesional.</p>
+            </Card>
+
+            {/* FAQ + Contacto */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              <Card className="p-6 md:col-span-2">
+                <h3 className="text-2xl font-semibold">Preguntas frecuentes</h3>
+                <details className="mt-3 group">
+                  <summary className="cursor-pointer select-none rounded-xl border px-4 py-2 group-open:bg-rose-50 dark:group-open:bg-neutral-900">¿El IMC es suficiente para evaluar salud?</summary>
+                  <p className="mt-2 px-4 text-sm text-neutral-700 dark:text-neutral-300">No. Úsalo junto a perímetro de cintura, evaluación clínica y laboratorio.</p>
+                </details>
+                <details className="mt-3 group">
+                  <summary className="cursor-pointer select-none rounded-xl border px-4 py-2 group-open:bg-rose-50 dark:group-open:bg-neutral-900">¿Necesito suplementos?</summary>
+                  <p className="mt-2 px-4 text-sm text-neutral-700 dark:text-neutral-300">No de rutina. Prioriza alimentos reales, proteína adecuada y sueño.</p>
+                </details>
+              </Card>
+              <Card className="p-6 md:col-span-1">
+                <h3 className="text-2xl font-semibold">Contacto</h3>
+                <form className="mt-3 grid gap-2" onSubmit={(e)=>{e.preventDefault(); alert("¡Gracias! Te contactaremos pronto.");}}>
+                  <input className="rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700" placeholder="Tu nombre" required />
+                  <input type="email" className="rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700" placeholder="Email" required />
+                  <textarea className="rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700" placeholder="Mensaje" rows="3" required></textarea>
+                  <button className="mt-1 rounded-xl bg-rose-500 px-4 py-2 text-white hover:bg-rose-600">Enviar</button>
+                </form>
+              </Card>
+            </div>
+
+            <Card className="p-4 text-center text-sm">
+              <p>Redes: 📧 contacto@bienestar.org · 📱 WhatsApp · 📸 Instagram · 🎥 TikTok</p>
+              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Contenido informativo; no sustituye valoración profesional.</p>
             </Card>
           </div>
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
   </script>
 </body>
 </html>
