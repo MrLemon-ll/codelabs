@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bienestar • Obesidad</title>
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="light dark" />
+  <!-- Favicon embebido (evita 404) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop stop-color='%23fb7185'/%3E%3Cstop stop-color='%23fde68a' offset='1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='44' fill='url(%23g)'/%3E%3C/svg%3E">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     html,body,#root{height:100%}
@@ -20,25 +22,25 @@
   </style>
 </head>
 <body class="antialiased">
-  <!-- Audio ambiente (puedes reemplazar por tu archivo) -->
+  <!-- Sonido ambiente (puedes reemplazar la URL por la tuya) -->
   <audio id="ambAudio" src="https://cdn.pixabay.com/download/audio/2021/09/16/audio_0b4d2f88f6.mp3?filename=forest-birds-ambient-116199.mp3" loop preload="none"></audio>
 
   <div id="root"></div>
 
-  <!-- React / DOM / Babel -->
+  <!-- React + ReactDOM + Babel -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- Recharts -->
   <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
-  <!-- Lottie -->
+  <!-- Lottie webcomponent -->
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 
   <script type="text/babel">
     const {useEffect,useMemo,useRef,useState} = React;
     const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
 
-    /* ---- UI helpers ---- */
+    /* ---------- Helpers UI ---------- */
     const Card = ({className="",children}) => (
       <div className={`rounded-3xl bg-white/70 dark:bg-neutral-900/60 backdrop-blur border border-neutral-200 dark:border-neutral-800 shadow-sm ${className}`}>{children}</div>
     );
@@ -54,18 +56,18 @@
     );
     const LottieBox = ({src,className=""}) => (
       <div className={`rounded-2xl border bg-white/70 dark:bg-neutral-900/60 p-2 ${className}`}>
-        <lottie-player src={src} background="transparent" speed="1" loop autoplay style="width:100%;height:160px"></lottie-player>
+        <lottie-player src={src} background="transparent" speed="1" loop autoplay style={{width:"100%",height:"160px"}}></lottie-player>
       </div>
     );
 
-    /* ---- localStorage ---- */
+    /* ---------- localStorage hook ---------- */
     const useLocal = (key,initial)=>{
       const [state,setState]=useState(()=>{try{const v=localStorage.getItem(key);return v?JSON.parse(v):initial}catch{return initial}});
       useEffect(()=>{try{localStorage.setItem(key,JSON.stringify(state))}catch{}},[key,state]);
       return [state,setState];
     };
 
-    /* ---- Respiración 4-7-8 ---- */
+    /* ---------- Respiración 4–7–8 ---------- */
     function BreathingCoach(){
       const phases=[{label:"Inhala",seconds:4},{label:"Sostén",seconds:7},{label:"Exhala",seconds:8}];
       const [idx,setIdx]=useState(0); const [sec,setSec]=useState(phases[0].seconds);
@@ -76,11 +78,15 @@
           <div className="absolute inset-0 rounded-full bg-rose-200/70 dark:bg-rose-900/40 transition-transform duration-700 ease-in-out" style={{transform:`scale(${scale})`}}></div>
           <div className="absolute inset-3 rounded-full bg-white/70 dark:bg-neutral-900/60 border"></div>
         </div>
-        <div><p className="text-xl font-semibold">{phase}</p><p className="text-neutral-600 dark:text-neutral-300">Cuenta: {sec}s</p><p className="text-xs text-neutral-500 mt-1">3–5 ciclos para relajar.</p></div>
+        <div>
+          <p className="text-xl font-semibold">{phase}</p>
+          <p className="text-neutral-600 dark:text-neutral-300">Cuenta: {sec}s</p>
+          <p className="text-xs text-neutral-500 mt-1">3–5 ciclos para relajar.</p>
+        </div>
       </div>);
     }
 
-    /* ---- Galería de videos (usa tus MP4 locales) ---- */
+    /* ---------- Galería de videos ---------- */
     function fmtDur(s){ if(!s||!isFinite(s)) return "--:--"; const m=Math.floor(s/60); const ss=Math.round(s%60); return `${m}:${ss.toString().padStart(2,"0")}`; }
     function VideoGallery({videos,onEnded}){
       const [i,setI]=useState(0);
@@ -98,8 +104,8 @@
           <div className="md:col-span-2">
             <div className="relative overflow-hidden rounded-2xl border">
               <video ref={ref} key={videos[i].src} controls playsinline preload="metadata" poster={videos[i].poster||""} className="w-full aspect-video bg-black">
-                <source src={videos[i].src} type="video/mp4"/>
-                <!-- <track kind="captions" src="subtitles/archivo.vtt" srclang="es" label="Español"> -->
+                <source src={videos[i].src} type="video/mp4" />
+                {/* <track kind="captions" src="subtitles/archivo.vtt" srclang="es" label="Español" /> */}
                 Tu navegador no soporta video HTML5.
               </video>
             </div>
@@ -126,16 +132,16 @@
       );
     }
 
-    /* ---- App principal ---- */
+    /* ---------- App principal ---------- */
     function App(){
-      // Tema + Paz
+      // Tema y audio paz
       const [dark,setDark]=useLocal("theme-dark",false);
       useEffect(()=>{const r=document.documentElement; dark?r.classList.add("dark"):r.classList.remove("dark")},[dark]);
       const audioRef=useRef(null); useEffect(()=>{audioRef.current=document.getElementById("ambAudio")},[]);
       const [peace,setPeace]=useLocal("peace-mode",false); const [vol,setVol]=useLocal("peace-vol",0.25);
       useEffect(()=>{if(!audioRef.current) return; audioRef.current.volume=vol; peace?audioRef.current.play().catch(()=>{}):audioRef.current.pause()},[peace,vol]);
 
-      // Datos y utilidades ya existentes (IMC, TDEE, hábitos, peso, quiz bienestar) – se mantienen:
+      // IMC + TDEE
       const [kg,setKg]=useLocal("kg",70), [cm,setCm]=useLocal("cm",170);
       const [sexo,setSexo]=useLocal("sexo","F"), [edad,setEdad]=useLocal("edad",30), [actividad,setAct]=useLocal("actividad",1.375);
       const bmi=useMemo(()=>{const m=cm/100; const v=kg/(m*m||1); return isFinite(v)?Math.round(v*10)/10:0},[kg,cm]);
@@ -143,6 +149,7 @@
       const bmr=useMemo(()=>Math.round((sexo==="M"? (10*kg + 6.25*cm - 5*edad + 5) : (10*kg + 6.25*cm - 5*edad - 161))),[sexo,kg,cm,edad]);
       const tdee=useMemo(()=>Math.round(bmr*actividad),[bmr,actividad]);
 
+      // Hábitos + peso
       const defaultHabits=[{id:"agua",nombre:"Agua (8 vasos)",semana:Array(7).fill(false)},{id:"pasos",nombre:"10k pasos",semana:Array(7).fill(false)},{id:"fuerza",nombre:"Fuerza (2x)",semana:Array(7).fill(false)},{id:"descanso",nombre:"Dormir 7–9h",semana:Array(7).fill(false)}];
       const [habitos,setHabitos]=useLocal("habitos",defaultHabits);
       const toggleDia=(hid,idx)=>setHabitos(H=>H.map(h=>h.id===hid?{...h,semana:h.semana.map((v,i)=>i===idx?!v:v)}:h));
@@ -150,21 +157,21 @@
       const [newWeight,setNewWeight]=useState(kg), [newDate,setNewDate]=useState(new Date().toISOString().slice(0,10));
       const addWeight=()=>{if(!newDate||!newWeight)return; setPesoRegistro(arr=>[...arr.filter(p=>p.fecha!==newDate),{fecha:newDate,peso:Number(newWeight)}].sort((a,b)=>a.fecha.localeCompare(b.fecha)))};
 
-      // Paso a paso
+      // Pasos
       const [slide,setSlide]=useState(0);
       const pasos=[{titulo:"1) Conócete y define metas",items:["Calcula IMC y cintura.","1 meta concreta (4–6 semanas).","Registra 3 días de base."]},{titulo:"2) Plan 80/20 + movimiento",items:["3 comidas + 1 colación (proteína/fibra).","Plato: 1/2 verduras, 1/4 proteína, 1/4 carbo integral.","150–300 min/sem + 2x fuerza."]},{titulo:"3) Acompañamiento y seguimiento",items:["Apoyo psicológico.","Consulta si hay comorbilidades.","Revisiones semanales y ajustes amables."]}];
 
-      // Cuestionario bienestar (para el final del video)
+      // Cuestionario bienestar
       const qs=["Poco interés o placer en hacer cosas","Sensación de tristeza o decaimiento","Dificultad para dormir o dormir en exceso","Cansancio o poca energía","Cambios en el apetito","Sentirse mal consigo mismo/a","Dificultad para concentrarse","Inquietud o ansiedad"];
       const [ans,setAns]=useLocal("quiz-ans",Array(qs.length).fill(0)); const score=ans.reduce((a,b)=>a+b,0);
       const nivel=score<=7?"bajo":score<=15?"moderado":"alto"; const nivelColor={bajo:"bg-green-100 text-green-800",moderado:"bg-amber-100 text-amber-800",alto:"bg-rose-100 text-rose-800"}[nivel];
       const [showQuiz,setShowQuiz]=useState(false);
 
-      // Lista de TUS videos:
+      // TUS videos (rutas absolutas + cache buster v=3)
       const videos=[
-        { src:"videos/la-obesidad.mp4",       title:"La obesidad",           desc:"Introducción general a la temática" },
-        { src:"videos/que-es-la-obesidad.mp4",title:"¿Qué es la obesidad?",  desc:"Conceptos clave y definición"       },
-        { src:"videos/obesidad.mp4",          title:"Obesidad (extra)",      desc:"Profundización y recomendaciones"   },
+        { src: "/videos/la-obesidad.mp4?v=3",        title:"La obesidad",          desc:"Introducción general" },
+        { src: "/videos/que-es-la-obesidad.mp4?v=3", title:"¿Qué es la obesidad?", desc:"Conceptos clave"     },
+        { src: "/videos/obesidad.mp4?v=3",           title:"Obesidad (extra)",     desc:"Recomendaciones"     },
       ];
 
       return (
@@ -194,7 +201,9 @@
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <div className="rounded-2xl border bg-white/70 dark:bg-neutral-900/60 p-2"><lottie-player src="https://lottie.host/0e1d94dc-3d43-42f6-a78b-7b1a6f4f9a89/Ht0kRzP1m6.json" background="transparent" speed="1" loop autoplay style="width:100%;height:180px"></lottie-player></div>
+                  <div className="rounded-2xl border bg-white/70 dark:bg-neutral-900/60 p-2">
+                    <lottie-player src="https://lottie.host/0e1d94dc-3d43-42f6-a78b-7b1a6f4f9a89/Ht0kRzP1m6.json" background="transparent" speed="1" loop autoplay style={{width:"100%",height:"180px"}}></lottie-player>
+                  </div>
                   <div className="mt-3"><AnimatedBlob/></div>
                 </div>
               </div>
@@ -214,17 +223,35 @@
                   <h3 className="text-2xl font-semibold">Calculadora de IMC</h3>
                   <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">Orientativa; no sustituye valoración clínica.</p>
                   <div className="mt-4 grid grid-cols-2 gap-4 max-w-md">
-                    <label className="text-sm">Peso (kg)<input type="number" value={kg} onChange={e=>setKg(Number(e.target.value))} className="mt-1 w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-300 dark:bg-neutral-900 dark:border-neutral-700"/></label>
-                    <label className="text-sm">Estatura (cm)<input type="number" value={cm} onChange={e=>setCm(Number(e.target.value))} className="mt-1 w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-300 dark:bg-neutral-900 dark:border-neutral-700"/></label>
+                    <label className="text-sm">Peso (kg)
+                      <input type="number" value={kg} onChange={e=>setKg(Number(e.target.value))} className="mt-1 w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-300 dark:bg-neutral-900 dark:border-neutral-700"/>
+                    </label>
+                    <label className="text-sm">Estatura (cm)
+                      <input type="number" value={cm} onChange={e=>setCm(Number(e.target.value))} className="mt-1 w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-300 dark:bg-neutral-900 dark:border-neutral-700"/>
+                    </label>
                   </div>
                   <p className="mt-3"><strong>IMC:</strong> <span className="font-semibold">{bmi}</span> — {clasif}</p>
                 </div>
                 <div className="md:col-span-1">
                   <h3 className="text-2xl font-semibold">TDEE (Gasto diario)</h3>
                   <div className="mt-3 grid grid-cols-2 gap-3">
-                    <label className="text-sm">Sexo<select value={sexo} onChange={e=>setSexo(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"><option value="F">Femenino</option><option value="M">Masculino</option></select></label>
-                    <label className="text-sm">Edad<input type="number" value={edad} onChange={e=>setEdad(Number(e.target.value))} className="mt-1 w-full rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"/></label>
-                    <label className="col-span-2 text-sm">Actividad<select value={actividad} onChange={e=>setAct(Number(e.target.value))} className="mt-1 w-full rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"><option value="1.2">Sedentario (×1.2)</option><option value="1.375">Ligero (×1.375)</option><option value="1.55">Moderado (×1.55)</option><option value="1.725">Alto (×1.725)</option><option value="1.9">Muy alto (×1.9)</option></select></label>
+                    <label className="text-sm">Sexo
+                      <select value={sexo} onChange={e=>setSexo(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700">
+                        <option value="F">Femenino</option><option value="M">Masculino</option>
+                      </select>
+                    </label>
+                    <label className="text-sm">Edad
+                      <input type="number" value={edad} onChange={e=>setEdad(Number(e.target.value))} className="mt-1 w-full rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"/>
+                    </label>
+                    <label className="col-span-2 text-sm">Actividad
+                      <select value={actividad} onChange={e=>setAct(Number(e.target.value))} className="mt-1 w-full rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700">
+                        <option value="1.2">Sedentario (×1.2)</option>
+                        <option value="1.375">Ligero (×1.375)</option>
+                        <option value="1.55">Moderado (×1.55)</option>
+                        <option value="1.725">Alto (×1.725)</option>
+                        <option value="1.9">Muy alto (×1.9)</option>
+                      </select>
+                    </label>
                   </div>
                   <p className="mt-3 text-sm">BMR ≈ <b>{bmr}</b> kcal · TDEE ≈ <b>{tdee}</b> kcal/día</p>
                 </div>
@@ -234,21 +261,46 @@
             {/* Respiración */}
             <Card id="respira" className="p-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div className="md:col-span-2"><h3 className="text-2xl font-semibold">Respiración 4–7–8</h3><p className="text-sm text-neutral-600 dark:text-neutral-400">Ejercicio para calmar. Sigue el círculo.</p><div className="mt-4"><BreathingCoach/></div></div>
-                <div className="md:col-span-1"><LottieBox src="https://assets5.lottiefiles.com/private_files/lf30_zx2t4n.json"/><p className="text-xs text-neutral-500 mt-2">Activa «Paz ON» para escuchar naturaleza 🌲</p></div>
+                <div className="md:col-span-2">
+                  <h3 className="text-2xl font-semibold">Respiración 4–7–8</h3>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400">Ejercicio para calmar. Sigue el círculo.</p>
+                  <div className="mt-4"><BreathingCoach/></div>
+                </div>
+                <div className="md:col-span-1">
+                  <LottieBox src="https://assets5.lottiefiles.com/private_files/lf30_zx2t4n.json"/>
+                  <p className="text-xs text-neutral-500 mt-2">Activa «Paz ON» para escuchar naturaleza 🌲</p>
+                </div>
               </div>
             </Card>
 
             {/* Paso a paso */}
             <Card id="pasos" className="p-6">
-              <div className="flex items-center justify-between"><h3 className="text-2xl font-semibold">Cómo empezar tu tratamiento paso a paso</h3><div className="flex items-center gap-2"><button onClick={()=>setSlide(s=>(s-1+pasos.length)%pasos.length)} className="rounded-full border px-3 py-1 hover:bg-rose-50 dark:hover:bg-neutral-900">←</button><button onClick={()=>setSlide(s=>(s+1)%pasos.length)} className="rounded-full border px-3 py-1 hover:bg-rose-50 dark:hover:bg-neutral-900">→</button></div></div>
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-semibold">Cómo empezar tu tratamiento paso a paso</h3>
+                <div className="flex items-center gap-2">
+                  <button onClick={()=>setSlide(s=>(s-1+pasos.length)%pasos.length)} className="rounded-full border px-3 py-1 hover:bg-rose-50 dark:hover:bg-neutral-900">←</button>
+                  <button onClick={()=>setSlide(s=>(s+1)%pasos.length)} className="rounded-full border px-3 py-1 hover:bg-rose-50 dark:hover:bg-neutral-900">→</button>
+                </div>
+              </div>
               <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div className="md:col-span-2 rounded-2xl border bg-white dark:bg-neutral-900 p-5"><h4 className="text-xl font-semibold">{pasos[slide].titulo}</h4><ul className="mt-3 list-disc pl-5 space-y-2 text-neutral-700 dark:text-neutral-300">{pasos[slide].items.map((it,i)=><li key={i}>{it}</li>)}</ul></div>
-                <div className="md:col-span-1"><div className="rounded-2xl border bg-white/70 dark:bg-neutral-900/60 p-2"><lottie-player src="https://assets6.lottiefiles.com/private_files/lf30_ikvz7q7z.json" background="transparent" speed="1" loop autoplay style="width:100%;height:160px"></lottie-player></div><div className="mt-3 flex items-center justify-center gap-2">{pasos.map((_,i)=><span key={i} className={`h-2 w-2 rounded-full border ${i===slide?"bg-rose-500 border-rose-500":"bg-white dark:bg-neutral-900"}`}></span>)}</div></div>
+                <div className="md:col-span-2 rounded-2xl border bg-white dark:bg-neutral-900 p-5">
+                  <h4 className="text-xl font-semibold">{pasos[slide].titulo}</h4>
+                  <ul className="mt-3 list-disc pl-5 space-y-2 text-neutral-700 dark:text-neutral-300">
+                    {pasos[slide].items.map((it,i)=><li key={i}>{it}</li>)}
+                  </ul>
+                </div>
+                <div className="md:col-span-1">
+                  <div className="rounded-2xl border bg-white/70 dark:bg-neutral-900/60 p-2">
+                    <lottie-player src="https://assets6.lottiefiles.com/private_files/lf30_ikvz7q7z.json" background="transparent" speed="1" loop autoplay style={{width:"100%",height:"160px"}}></lottie-player>
+                  </div>
+                  <div className="mt-3 flex items-center justify-center gap-2">
+                    {pasos.map((_,i)=><span key={i} className={`h-2 w-2 rounded-full border ${i===slide?"bg-rose-500 border-rose-500":"bg-white dark:bg-neutral-900"}`}></span>)}
+                  </div>
+                </div>
               </div>
             </Card>
 
-            <!-- ======= TUS VIDEOS + CUESTIONARIO ======= -->
+            {/* ===== Videos + Cuestionario ===== */}
             <Card className="p-6">
               <h3 className="text-2xl font-semibold">Videos educativos</h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400">Mira los videos y luego responde el cuestionario de bienestar.</p>
@@ -292,24 +344,28 @@
               </div>
             </Card>
 
-            <!-- Hábitos + Peso (igual que antes) -->
+            {/* Hábitos + Peso */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <Card className="p-6 md:col-span-2">
                 <h3 className="text-2xl font-semibold">Registro de peso</h3>
                 <div className="mt-3 flex flex-wrap items-end gap-3">
-                  <label className="text-sm">Fecha<input type="date" value={newDate} onChange={e=>setNewDate(e.target.value)} className="mt-1 rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"/></label>
-                  <label className="text-sm">Peso (kg)<input type="number" value={newWeight} onChange={e=>setNewWeight(e.target.value)} className="mt-1 rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"/></label>
+                  <label className="text-sm">Fecha
+                    <input type="date" value={newDate} onChange={e=>setNewDate(e.target.value)} className="mt-1 rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"/>
+                  </label>
+                  <label className="text-sm">Peso (kg)
+                    <input type="number" value={newWeight} onChange={e=>setNewWeight(e.target.value)} className="mt-1 rounded-xl border px-3 py-2 dark:bg-neutral-900 dark:border-neutral-700"/>
+                  </label>
                   <button onClick={addWeight} className="rounded-xl border px-4 py-2 hover:bg-rose-50 dark:hover:bg-neutral-900">Agregar</button>
                 </div>
                 <div className="mt-4 h-64 w-full">
-                  <div style="width:100%;height:100%;">
+                  <div style={{width:"100%",height:"100%"}}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={pesoRegistro} margin={{top:10,right:20,left:0,bottom:0}}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="fecha" tick={{fontSize:12}} />
-                        <YAxis tick={{fontSize:12}} domain={['dataMin-2','dataMax+2']} />
+                        <YAxis tick={{fontSize:12}} domain={['dataMin - 2','dataMax + 2']} />
                         <Tooltip />
-                        <Line type="monotone" dataKey="peso" strokeWidth="2" dot="false" />
+                        <Line type="monotone" dataKey="peso" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -336,8 +392,14 @@
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <Card className="p-6 md:col-span-2">
                 <h3 className="text-2xl font-semibold">Preguntas frecuentes</h3>
-                <details className="mt-3 group"><summary className="cursor-pointer select-none rounded-xl border px-4 py-2 group-open:bg-rose-50 dark:group-open:bg-neutral-900">¿El IMC basta para evaluar salud?</summary><p className="mt-2 px-4 text-sm text-neutral-700 dark:text-neutral-300">No. Úsalo con cintura, clínica y laboratorios.</p></details>
-                <details className="mt-3 group"><summary className="cursor-pointer select-none rounded-xl border px-4 py-2 group-open:bg-rose-50 dark:group-open:bg-neutral-900">¿Necesito suplementos?</summary><p className="mt-2 px-4 text-sm text-neutral-700 dark:text-neutral-300">No de rutina. Prioriza alimentos reales, proteína y sueño.</p></details>
+                <details className="mt-3 group">
+                  <summary className="cursor-pointer select-none rounded-xl border px-4 py-2 group-open:bg-rose-50 dark:group-open:bg-neutral-900">¿El IMC basta para evaluar salud?</summary>
+                  <p className="mt-2 px-4 text-sm text-neutral-700 dark:text-neutral-300">No. Úsalo con cintura, clínica y laboratorios.</p>
+                </details>
+                <details className="mt-3 group">
+                  <summary className="cursor-pointer select-none rounded-xl border px-4 py-2 group-open:bg-rose-50 dark:group-open:bg-neutral-900">¿Necesito suplementos?</summary>
+                  <p className="mt-2 px-4 text-sm text-neutral-700 dark:text-neutral-300">No de rutina. Prioriza alimentos reales, proteína y sueño.</p>
+                </details>
               </Card>
               <Card className="p-6 md:col-span-1">
                 <h3 className="text-2xl font-semibold">Contacto</h3>
